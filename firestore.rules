@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Public read for matches (needed to show the list before login too)
+    match /matches/{matchId} {
+      allow read: if true;
+      allow write: if false; // admin updates via Firebase console only
+    }
+
+    // Users can only read/write their own profile
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /predictions/{predictionId} {
+      // Read your own prediction always.
+      // Read others' predictions only if you've already submitted for that same match.
+      allow read: if
+        request.auth != null && (
+          resource.data.userId == request.auth.uid ||
+          exists(/databases/$(database)/documents/predictions/$(request.auth.uid + '_' + resource.data.matchId))
+        );
+
+      // Create: must be your own, document ID must follow the userId_matchId pattern,
+      // and the match must not have kicked off yet.
+      allow create: if
+        request.auth != null &&
+        request.auth.uid == request.resource.data.userId &&
+        predictionId == request.auth.uid + '_' + request.resource.data.matchId &&
+        request.resource.data.score1 is int &&
+        request.resource.data.score2 is int &&
+        request.resource.data.score1 >= 0 &&
+        request.resource.data.score2 >= 0 &&
+        request.time < get(/databases/$(database)/documents/matches/$(request.resource.data.matchId)).data.date;
+
+      // Immutable — no updates or deletes allowed
+      allow update, delete: if false;
+    }
+  }
+}
