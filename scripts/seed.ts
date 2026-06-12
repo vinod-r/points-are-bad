@@ -1,46 +1,75 @@
 /**
- * One-time script to seed Firestore with WC2026 group-stage fixtures.
+ * Fetches WC 2026 group-stage fixtures from football-data.org and seeds Firestore.
+ * Safe to re-run — uses the API match ID as the document ID so it's idempotent.
  *
  * Setup:
- *   1. Firebase console → Project settings → Service accounts → Generate new private key
- *   2. Save the downloaded JSON as service-account.json in the project root
- *   3. npm install -D firebase-admin tsx
- *   4. npx tsx scripts/seed.ts
+ *   1. service-account.json in project root (Firebase Admin key)
+ *   2. FOOTBALL_DATA_API_KEY in .env
+ *   3. npx tsx --env-file=.env scripts/seed.ts
  */
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
-import fixtures from '../src/data/wc2026-fixtures.json' assert { type: 'json' };
 
 const keyPath = resolve(process.cwd(), 'service-account.json');
-
 if (!existsSync(keyPath)) {
-  console.error('Missing service-account.json in project root.');
-  console.error('Download it from: Firebase console → Project settings → Service accounts → Generate new private key');
+  console.error('Missing service-account.json — download from Firebase console → Project settings → Service accounts');
   process.exit(1);
 }
 
-const serviceAccount = JSON.parse(readFileSync(keyPath, 'utf-8'));
+const apiKey = process.env.FOOTBALL_DATA_API_KEY;
+if (!apiKey) {
+  console.error('Missing FOOTBALL_DATA_API_KEY — add it to .env and run with --env-file=.env');
+  process.exit(1);
+}
 
-initializeApp({ credential: cert(serviceAccount) });
+initializeApp({ credential: cert(JSON.parse(readFileSync(keyPath, 'utf-8'))) });
 const db = getFirestore();
 
+interface ApiMatch {
+  id: number;
+  utcDate: string;
+  stage: string;
+  group: string | null;
+  homeTeam: { name: string };
+  awayTeam: { name: string };
+  venue: string | null;
+}
+
+async function fetchGroupStageMatches(): Promise<ApiMatch[]> {
+  const res = await fetch(
+    'https://api.football-data.org/v4/competitions/WC/matches?stage=GROUP_STAGE',
+    { headers: { 'X-Auth-Token': apiKey! } }
+  );
+  if (!res.ok) throw new Error(`API error: ${res.status} ${await res.text()}`);
+  const data = await res.json() as { matches: ApiMatch[] };
+  return data.matches;
+}
+
+function groupLetter(raw: string | null): string {
+  // "GROUP_A" → "A"
+  return raw ? raw.replace('GROUP_', '') : '?';
+}
+
 async function seed() {
-  console.log(`Seeding ${fixtures.length} matches...`);
+  console.log('Fetching WC 2026 group-stage fixtures from football-data.org...');
+  const matches = await fetchGroupStageMatches();
+  console.log(`Got ${matches.length} matches — writing to Firestore...`);
+
   const batch = db.batch();
-  for (const f of fixtures) {
-    const ref = db.collection('matches').doc(f.id);
+  for (const m of matches) {
+    const ref = db.collection('matches').doc(String(m.id));
     batch.set(ref, {
-      team1: f.team1,
-      team2: f.team2,
-      group: f.group,
-      date: Timestamp.fromDate(new Date(f.date)),
-      venue: f.venue,
+      team1: m.homeTeam.name,
+      team2: m.awayTeam.name,
+      group: groupLetter(m.group),
+      date: Timestamp.fromDate(new Date(m.utcDate)),
+      venue: m.venue ?? '',
     });
   }
   await batch.commit();
-  console.log(`Done — ${fixtures.length} matches written.`);
+  console.log(`Done — ${matches.length} matches written.`);
   process.exit(0);
 }
 
