@@ -32,10 +32,10 @@ export function Leaderboard({ matchMap }: Props) {
 
   if (finishedMatchIds.length === 0) {
     return (
-      <div className="text-center py-16">
+      <div className="text-center py-20">
         <p className="text-4xl mb-4">⏳</p>
-        <p className="text-slate-300 font-semibold mb-2">No results yet</p>
-        <p className="text-sm text-slate-500">
+        <p className="text-gray-800 font-bold text-lg mb-1">No results yet</p>
+        <p className="text-sm text-gray-500">
           Leaderboard updates once matches have final scores.
         </p>
       </div>
@@ -71,10 +71,10 @@ export function Leaderboard({ matchMap }: Props) {
 
   if (rows.length === 0) {
     return (
-      <div className="text-center py-16">
+      <div className="text-center py-20">
         <p className="text-4xl mb-4">📋</p>
-        <p className="text-slate-300 font-semibold mb-2">No predictions yet</p>
-        <p className="text-sm text-slate-500">
+        <p className="text-gray-800 font-bold text-lg mb-1">No predictions yet</p>
+        <p className="text-sm text-gray-500">
           Be the first to predict a finished match.
         </p>
       </div>
@@ -83,7 +83,7 @@ export function Leaderboard({ matchMap }: Props) {
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-slate-500 text-center mb-4">
+      <p className="text-xs text-gray-400 text-center mb-4 font-medium">
         Lower is better · {finishedMatchIds.length} match{finishedMatchIds.length !== 1 ? 'es' : ''} scored
       </p>
       {rows.map((row, i) => {
@@ -93,35 +93,36 @@ export function Leaderboard({ matchMap }: Props) {
         return (
           <div
             key={row.userId}
-            className={`flex items-center gap-3 rounded-2xl px-4 py-3 ${
+            className={`flex items-center gap-3 rounded-2xl px-4 py-3 border-2 ${
               isMe
-                ? 'bg-emerald-900/40 border border-emerald-700/40'
-                : 'bg-slate-800 border border-slate-700'
+                ? 'bg-yellow-50 border-yellow-300'
+                : 'bg-white border-gray-100'
             }`}
           >
-            <span className="w-6 text-center text-sm font-bold text-slate-400">
+            <span className="w-6 text-center text-sm font-bold text-gray-400">
               {medal ?? i + 1}
             </span>
             <img
               src={
                 row.userPhoto ||
-                `https://ui-avatars.com/api/?name=${encodeURIComponent(row.userName)}&background=334155&color=fff`
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(row.userName)}&background=f5c842&color=111`
               }
               alt={row.userName}
               className="w-8 h-8 rounded-full object-cover"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(row.userName)}&background=334155&color=fff`;
+                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(row.userName)}&background=f5c842&color=111`;
               }}
             />
-            <span className="flex-1 text-sm font-semibold text-white truncate">
+            <span className="flex-1 text-sm font-semibold text-gray-900 truncate">
               {row.userName}
-              {isMe && <span className="ml-2 text-xs text-emerald-400">(you)</span>}
+              {isMe && <span className="ml-2 text-xs text-yellow-600 font-bold">(you)</span>}
             </span>
             <div className="text-right">
-              <span className="text-lg font-black text-white tabular-nums">
+              <span className="text-xl font-black text-gray-900 tabular-nums">
                 {row.totalPoints}
               </span>
-              <span className="text-xs text-slate-400 ml-1">pts</span>
+              <span className="text-xs text-gray-400 ml-1">pts</span>
+              <div className="text-xs text-gray-400">{row.matchesScored} match{row.matchesScored !== 1 ? 'es' : ''}</div>
             </div>
           </div>
         );

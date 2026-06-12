@@ -1,6 +1,7 @@
 import type { Match } from '../lib/matches';
 import type { Prediction } from '../lib/predictions';
 import { calcPoints, pointsLabel } from '../lib/scoring';
+import { flagUrl } from '../lib/flags';
 
 interface Props {
   match: Match;
@@ -23,102 +24,104 @@ function getState(match: Match, pred: Prediction | undefined): CardState {
   return 'soon';
 }
 
-const stateLabel: Record<CardState, string> = {
-  open: 'Predict',
-  submitted: 'Submitted',
-  closed: 'Missed',
-  soon: 'Coming soon',
-  finished: 'Final',
+const statusConfig: Record<CardState, { dot: string; label: string; textColor: string }> = {
+  open:      { dot: 'bg-emerald-500', label: 'Predict',     textColor: 'text-emerald-600' },
+  submitted: { dot: 'bg-emerald-500', label: 'Submitted',   textColor: 'text-gray-500' },
+  closed:    { dot: 'bg-red-400',     label: 'Missed',      textColor: 'text-red-500' },
+  soon:      { dot: 'bg-gray-300',    label: 'Coming soon', textColor: 'text-gray-400' },
+  finished:  { dot: 'bg-gray-400',    label: 'Final',       textColor: 'text-gray-400' },
 };
 
-const stateDot: Record<CardState, string> = {
-  open: 'bg-emerald-400',
-  submitted: 'bg-blue-400',
-  closed: 'bg-red-400',
-  soon: 'bg-slate-400',
-  finished: 'bg-slate-400',
-};
-
-const stateColor: Record<CardState, string> = {
-  open: 'text-emerald-400',
-  submitted: 'text-blue-400',
-  closed: 'text-slate-400',
-  soon: 'text-slate-400',
-  finished: 'text-slate-400',
-};
-
-function formatKickoff(date: Date) {
-  return date.toLocaleString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+function TeamFlag({ name }: { name: string }) {
+  const url = flagUrl(name);
+  return (
+    <div className="flex flex-col items-center gap-2 w-24">
+      {url ? (
+        <img
+          src={url}
+          alt={name}
+          className="w-16 h-10 object-cover rounded-sm shadow-sm"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+        />
+      ) : (
+        <div className="w-16 h-10 bg-gray-100 rounded-sm flex items-center justify-center text-xl">
+          🏳️
+        </div>
+      )}
+      <span className="text-xs font-semibold text-gray-800 text-center leading-tight">
+        {name}
+      </span>
+    </div>
+  );
 }
 
 export function MatchCard({ match, myPrediction, onClick }: Props) {
   const state = getState(match, myPrediction);
+  const { dot, label, textColor } = statusConfig[state];
   const clickable = state === 'open' || state === 'submitted' || state === 'finished';
   const pts = myPrediction ? calcPoints(myPrediction, match) : null;
 
   return (
     <button
       onClick={clickable ? onClick : undefined}
-      className={`w-full text-left rounded-2xl border p-4 transition-all
-        ${clickable
-          ? 'border-slate-700 bg-slate-800 hover:border-slate-500 cursor-pointer'
-          : 'border-slate-800 bg-slate-900 cursor-default opacity-60'
-        }`}
+      className={`w-full text-left rounded-2xl border-2 bg-white p-4 transition-all
+        ${clickable ? 'border-yellow-300 hover:border-yellow-400 cursor-pointer hover:shadow-md' : 'border-gray-100 cursor-default opacity-60'}
+      `}
     >
+      {/* Status row */}
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-semibold tracking-widest text-slate-400 uppercase">
-          Group {match.group}
-        </span>
-        <div className="flex items-center gap-2">
+        <span className="text-xs text-gray-400 font-medium">Group {match.group}</span>
+        <div className="flex items-center gap-3">
           {pts !== null && (
-            <span className={`text-xs font-bold ${pts === 0 ? 'text-emerald-400' : 'text-amber-400'}`}>
+            <span className={`text-xs font-bold ${pts === 0 ? 'text-emerald-500' : 'text-amber-500'}`}>
               {pointsLabel(pts)}
             </span>
           )}
-          <span className="flex items-center gap-1.5 text-xs font-medium">
-            <span className={`w-2 h-2 rounded-full ${stateDot[state]}`} />
-            <span className={stateColor[state]}>{stateLabel[state]}</span>
+          <span className={`flex items-center gap-1.5 text-xs font-semibold ${textColor}`}>
+            <span className={`w-2 h-2 rounded-full ${dot}`} />
+            {label}
           </span>
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-lg font-bold text-white flex-1 text-left leading-tight">
-          {match.team1}
-        </span>
+      {/* Teams + scores */}
+      <div className="flex items-center justify-between">
+        <TeamFlag name={match.team1} />
 
-        {state === 'finished' ? (
-          <div className="flex flex-col items-center px-2 gap-0.5">
-            <span className="text-2xl font-black text-white tabular-nums">
-              {match.actualScore1} – {match.actualScore2}
+        <div className="flex items-center gap-3 flex-1 justify-center">
+          {state === 'finished' ? (
+            <>
+              <span className="text-5xl font-black text-gray-900 tabular-nums">{match.actualScore1}</span>
+              <span className="text-5xl font-black text-gray-900 tabular-nums">{match.actualScore2}</span>
+            </>
+          ) : state === 'submitted' && myPrediction ? (
+            <>
+              <span className="text-5xl font-black text-gray-900 tabular-nums">{myPrediction.score1}</span>
+              <span className="text-5xl font-black text-gray-900 tabular-nums">{myPrediction.score2}</span>
+            </>
+          ) : state === 'open' ? (
+            <span className="text-sm font-bold text-yellow-500 px-3 py-1.5 bg-yellow-50 rounded-lg">
+              Tap to predict
             </span>
-            {myPrediction && (
-              <span className="text-xs text-slate-500 tabular-nums">
-                You: {myPrediction.score1} – {myPrediction.score2}
-              </span>
-            )}
-          </div>
-        ) : state === 'submitted' && myPrediction ? (
-          <span className="text-2xl font-black text-white tabular-nums px-2">
-            {myPrediction.score1} – {myPrediction.score2}
-          </span>
-        ) : (
-          <span className="text-sm font-semibold text-slate-500 px-2">vs</span>
-        )}
+          ) : (
+            <span className="text-sm font-semibold text-gray-300">vs</span>
+          )}
+        </div>
 
-        <span className="text-lg font-bold text-white flex-1 text-right leading-tight">
-          {match.team2}
-        </span>
+        <TeamFlag name={match.team2} />
       </div>
 
-      <div className="mt-3 text-xs text-slate-500">
-        {formatKickoff(match.date)} · {match.venue}
+      {/* Kickoff time */}
+      <div className="mt-3 text-xs text-gray-400 text-center">
+        {match.date.toLocaleString(undefined, {
+          weekday: 'short', month: 'short', day: 'numeric',
+          hour: '2-digit', minute: '2-digit',
+        })}
+        {state === 'finished' && myPrediction && (
+          <span className="ml-2 text-gray-400">
+            · You: {myPrediction.score1}–{myPrediction.score2}
+          </span>
+        )}
       </div>
     </button>
   );
