@@ -20,6 +20,17 @@ function groupByDate(matches: Match[]): [string, Match[]][] {
   return Array.from(map.entries());
 }
 
+function getOpenMatches(matches: Match[], predMap: Map<string, Prediction>): Match[] {
+  const now = new Date();
+  const threeDays = 3 * 24 * 60 * 60 * 1000;
+  return matches.filter((m) => {
+    if (m.actualScore1 != null) return false;       // finished
+    if (predMap.has(m.id)) return false;             // already predicted
+    if (now >= m.date) return false;                 // kicked off already
+    return m.date.getTime() - now.getTime() <= threeDays;
+  });
+}
+
 type View = 'matches' | 'leaderboard';
 
 function App() {
@@ -44,6 +55,20 @@ function App() {
 
   const predMap = new Map(predictions.map((p) => [p.matchId, p]));
   const matchMap = new Map(matches.map((m) => [m.id, m]));
+  const openMatches = getOpenMatches(matches, predMap);
+
+  function jumpToNextPrediction() {
+    if (openMatches.length === 0) return;
+    const next = openMatches[0];
+    const el = document.getElementById(`match-${next.id}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Small delay so scroll completes before modal opens
+      setTimeout(() => setSelected(next), 300);
+    } else {
+      setSelected(next);
+    }
+  }
 
   if (auth.loading) {
     return (
@@ -55,7 +80,7 @@ function App() {
 
   return (
     <AuthContext.Provider value={auth}>
-      <div className="min-h-screen max-w-lg mx-auto px-4 py-6">
+      <div className="min-h-screen max-w-lg mx-auto px-4 py-6 pb-24">
         {/* Header */}
         <header className="flex items-center justify-between bg-yellow-300 rounded-2xl px-5 py-3 mb-6">
           <h1 className="text-xl font-black text-gray-900 leading-tight">
@@ -64,7 +89,6 @@ function App() {
           <div className="flex items-center gap-2">
             {auth.user ? (
               <>
-                {/* Tabs inside header */}
                 <button
                   onClick={() => setView('matches')}
                   className={`px-4 py-1.5 rounded-full text-sm font-bold transition-colors ${
@@ -134,12 +158,13 @@ function App() {
                 </h2>
                 <div className="space-y-3">
                   {dayMatches.map((m) => (
-                    <MatchCard
-                      key={m.id}
-                      match={m}
-                      myPrediction={predMap.get(m.id)}
-                      onClick={() => setSelected(m)}
-                    />
+                    <div key={m.id} id={`match-${m.id}`}>
+                      <MatchCard
+                        match={m}
+                        myPrediction={predMap.get(m.id)}
+                        onClick={() => setSelected(m)}
+                      />
+                    </div>
                   ))}
                 </div>
               </section>
@@ -147,6 +172,34 @@ function App() {
           </div>
         )}
       </div>
+
+      {/* Floating "predictions left" button */}
+      {auth.user && view === 'matches' && openMatches.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
+          <button
+            onClick={jumpToNextPrediction}
+            className="flex items-center gap-2 px-4 py-2 rounded-full shadow-md hover:shadow-lg transition-shadow active:scale-95"
+            style={{ backgroundColor: '#F6F6F6' }}
+          >
+            <span
+              style={{
+                fontFamily: 'Lexend, sans-serif',
+                fontWeight: 400,
+                fontSize: '16px',
+                letterSpacing: '-0.04em',
+                lineHeight: '24px',
+                color: '#0A0A0A',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {openMatches.length} prediction{openMatches.length !== 1 ? 's' : ''} left
+            </span>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 3v10M3 8l5 5 5-5" stroke="#0A0A0A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      )}
 
       {selected && (
         <PredictionModal
