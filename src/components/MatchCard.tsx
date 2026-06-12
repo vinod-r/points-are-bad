@@ -32,6 +32,10 @@ const statusConfig: Record<CardState, { dot: string; label: string; textColor: s
   finished:  { dot: 'bg-gray-400',    label: 'Final',       textColor: 'text-gray-400' },
 };
 
+function abbr(name: string) {
+  return name.slice(0, 3).toUpperCase();
+}
+
 function TeamFlag({ name }: { name: string }) {
   const url = flagUrl(name);
   return (
@@ -95,11 +99,11 @@ export function MatchCard({ match, myPrediction, onClick }: Props) {
               <span className="text-4xl font-black text-gray-300 mx-1">-</span>
               <span className="text-5xl font-black text-gray-900 tabular-nums">{match.actualScore2}</span>
             </>
-          ) : state === 'submitted' && myPrediction ? (
+          ) : state === 'submitted' ? (
             <>
-              <span className="text-5xl font-black text-gray-900 tabular-nums">{myPrediction.score1}</span>
-              <span className="text-4xl font-black text-gray-300 mx-1">-</span>
-              <span className="text-5xl font-black text-gray-900 tabular-nums">{myPrediction.score2}</span>
+              <span className="text-5xl font-black text-gray-200 tabular-nums">-</span>
+              <span className="text-4xl font-black text-gray-200 mx-1">-</span>
+              <span className="text-5xl font-black text-gray-200 tabular-nums">-</span>
             </>
           ) : state === 'open' ? (
             <span className="text-sm font-bold text-yellow-500 px-3 py-1.5 bg-yellow-50 rounded-lg">
@@ -113,18 +117,27 @@ export function MatchCard({ match, myPrediction, onClick }: Props) {
         <TeamFlag name={match.team2} />
       </div>
 
-      {/* Kickoff time */}
-      <div className="mt-3 text-xs text-gray-400 text-center">
-        {match.date.toLocaleString(undefined, {
-          weekday: 'short', month: 'short', day: 'numeric',
-          hour: '2-digit', minute: '2-digit',
-        })}
-        {state === 'finished' && myPrediction && (
-          <span className="ml-2 text-gray-400">
-            · You: {myPrediction.score1}–{myPrediction.score2}
-          </span>
-        )}
-      </div>
+      {/* My prediction (shown below scores for submitted + finished) */}
+      {myPrediction && (
+        <div className="mt-3 text-center">
+          <div className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase mb-0.5">
+            My Prediction
+          </div>
+          <div className="text-sm font-bold text-yellow-500">
+            {abbr(match.team1)} {myPrediction.score1} - {myPrediction.score2} {abbr(match.team2)}
+          </div>
+        </div>
+      )}
+
+      {/* Kickoff time (only when no prediction shown) */}
+      {!myPrediction && (
+        <div className="mt-3 text-xs text-gray-400 text-center">
+          {match.date.toLocaleString(undefined, {
+            weekday: 'short', month: 'short', day: 'numeric',
+            hour: '2-digit', minute: '2-digit',
+          })}
+        </div>
+      )}
     </button>
   );
 }
