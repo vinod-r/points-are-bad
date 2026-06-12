@@ -75,17 +75,10 @@ export function MatchCard({ match, myPrediction, onClick }: Props) {
       {/* Status row */}
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs text-gray-400 font-medium">Group {match.group}</span>
-        <div className="flex items-center gap-3">
-          {pts !== null && (
-            <span className={`text-xs font-bold ${pts === 0 ? 'text-emerald-500' : 'text-amber-500'}`}>
-              {pointsLabel(pts)}
-            </span>
-          )}
-          <span className={`flex items-center gap-1.5 text-xs font-semibold ${textColor}`}>
-            <span className={`w-2 h-2 rounded-full ${dot}`} />
-            {label}
-          </span>
-        </div>
+        <span className={`flex items-center gap-1.5 text-xs font-semibold ${textColor}`}>
+          <span className={`w-2 h-2 rounded-full ${dot}`} />
+          {label}
+        </span>
       </div>
 
       {/* Teams + scores */}
@@ -119,13 +112,34 @@ export function MatchCard({ match, myPrediction, onClick }: Props) {
 
       {/* My prediction (shown below scores for submitted + finished) */}
       {myPrediction && (
-        <div className="mt-3 text-center">
-          <div className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase mb-0.5">
-            My Prediction
+        <div className="mt-3 flex items-center justify-center gap-4">
+          <div className="flex flex-col items-start">
+            <span
+              className="uppercase text-[10px] leading-3 mb-0.5"
+              style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 400, color: '#C0C0C0' }}
+            >
+              My Prediction
+            </span>
+            <span
+              className="text-xs leading-4"
+              style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 700, color: '#BE9F32' }}
+            >
+              {abbr(match.team1)} {myPrediction.score1} - {myPrediction.score2} {abbr(match.team2)}
+            </span>
           </div>
-          <div className="text-sm font-bold text-yellow-500">
-            {abbr(match.team1)} {myPrediction.score1} - {myPrediction.score2} {abbr(match.team2)}
-          </div>
+          {pts !== null && (
+            <div
+              className="flex items-center px-1 py-0.5 rounded"
+              style={{ backgroundColor: '#F6F6F6' }}
+            >
+              <span
+                className="text-xs leading-4"
+                style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 700, color: '#999999' }}
+              >
+                {pts === 0 ? '🎯' : `+${pts}`}
+              </span>
+            </div>
+          )}
         </div>
       )}
 
