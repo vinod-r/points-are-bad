@@ -1,6 +1,6 @@
 import type { Match } from '../lib/matches';
 import type { Prediction } from '../lib/predictions';
-import { calcPoints, pointsLabel } from '../lib/scoring';
+import { calcPoints } from '../lib/scoring';
 import { flagUrl } from '../lib/flags';
 
 interface Props {
