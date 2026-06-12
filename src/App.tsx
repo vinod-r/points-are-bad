@@ -57,6 +57,18 @@ function App() {
   const matchMap = new Map(matches.map((m) => [m.id, m]));
   const openMatches = getOpenMatches(matches, predMap);
 
+  // Scroll to the next upcoming match on initial load
+  useEffect(() => {
+    if (matches.length === 0) return;
+    const now = new Date();
+    const next = matches.find((m) => m.date > now);
+    if (!next) return;
+    // Let the DOM render first
+    requestAnimationFrame(() => {
+      document.getElementById(`match-${next.id}`)?.scrollIntoView({ behavior: 'instant', block: 'start' });
+    });
+  }, [matches.length > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+
   function jumpToNextPrediction() {
     if (openMatches.length === 0) return;
     const next = openMatches[0];
