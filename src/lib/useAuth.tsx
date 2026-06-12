@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import type { User } from 'firebase/auth';
-import { GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut as firebaseSignOut } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
@@ -24,6 +24,7 @@ export function useAuthProvider(): AuthContextType {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    getRedirectResult(auth).catch(() => {});
     return auth.onAuthStateChanged(async (u) => {
       setUser(u);
       if (u) {
@@ -38,7 +39,7 @@ export function useAuthProvider(): AuthContextType {
   }, []);
 
   const signIn = async () => {
-    await signInWithPopup(auth, new GoogleAuthProvider());
+    await signInWithRedirect(auth, new GoogleAuthProvider());
   };
 
   const signOut = () => firebaseSignOut(auth);
