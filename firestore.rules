@@ -13,6 +13,12 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Leaderboard aggregates — written only by the sync script (admin SDK)
+    match /leaderboard/{userId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
     match /predictions/{predictionId} {
       // Read your own prediction always.
       // Read others' predictions only if you've already submitted for that same match.

@@ -54,7 +54,6 @@ function App() {
   }, [auth.user]);
 
   const predMap = new Map(predictions.map((p) => [p.matchId, p]));
-  const matchMap = new Map(matches.map((m) => [m.id, m]));
   const openMatches = getOpenMatches(matches, predMap);
 
   // Scroll to the next upcoming match on initial load
@@ -160,7 +159,7 @@ function App() {
             <div className="w-8 h-8 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : view === 'leaderboard' ? (
-          <Leaderboard matchMap={matchMap} />
+          <Leaderboard />
         ) : (
           <div className="space-y-8">
             {groupByDate(matches).map(([date, dayMatches]) => (
