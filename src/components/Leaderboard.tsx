@@ -99,9 +99,6 @@ export function Leaderboard() {
         );
       })}
 
-      <p className="text-center text-xs text-gray-400 mt-4 font-medium">
-        {rows[0]?.matchesScored ?? 0} match{(rows[0]?.matchesScored ?? 0) !== 1 ? 'es' : ''} scored · lower is better
-      </p>
     </div>
   );
 }
