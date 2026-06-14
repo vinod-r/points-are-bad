@@ -54,51 +54,81 @@ async function fetchFinishedMatches(): Promise<ApiMatch[]> {
   return data.matches;
 }
 
+const MISS_PENALTY = 5;
+
 async function recomputeLeaderboard(finishedMatchIds: Set<string>, scoreMap: Map<string, { home: number; away: number }>) {
   console.log('Recomputing leaderboard...');
 
-  // Fetch all predictions for finished matches
+  // Fetch match dates so we know the kickoff time of every finished match
+  const matchesSnap = await db.collection('matches').get();
+  const matchDates = new Map<string, Date>();
+  for (const doc of matchesSnap.docs) {
+    const d = doc.data();
+    if (d.date) matchDates.set(doc.id, d.date.toDate());
+  }
+
+  // Fetch all predictions
   const predsSnap = await db.collection('predictions').get();
 
-  // Aggregate per user
-  const userTotals = new Map<string, {
-    displayName: string;
-    photoURL: string;
-    totalPoints: number;
-    matchesScored: number;
-  }>();
+  // Group predictions by user: userId -> matchId -> { score1, score2 }
+  const userPreds = new Map<string, Map<string, { score1: number; score2: number }>>();
+  const userInfo = new Map<string, { displayName: string; photoURL: string }>();
 
   for (const doc of predsSnap.docs) {
-    const pred = doc.data();
-    if (!finishedMatchIds.has(pred.matchId)) continue;
-
-    const score = scoreMap.get(pred.matchId);
-    if (!score) continue;
-
-    const pts = Math.abs(pred.score1 - score.home) + Math.abs(pred.score2 - score.away);
-
-    const existing = userTotals.get(pred.userId);
-    if (existing) {
-      existing.totalPoints += pts;
-      existing.matchesScored += 1;
-    } else {
-      userTotals.set(pred.userId, {
-        displayName: pred.userName ?? 'Anonymous',
-        photoURL: pred.userPhoto ?? '',
-        totalPoints: pts,
-        matchesScored: 1,
-      });
-    }
+    const p = doc.data();
+    if (!userPreds.has(p.userId)) userPreds.set(p.userId, new Map());
+    userPreds.get(p.userId)!.set(p.matchId, { score1: p.score1, score2: p.score2 });
+    userInfo.set(p.userId, { displayName: p.userName ?? 'Anonymous', photoURL: p.userPhoto ?? '' });
   }
 
-  // Write leaderboard documents
+  // Compute totals per user
   const batch = db.batch();
-  for (const [userId, data] of userTotals) {
-    const ref = db.collection('leaderboard').doc(userId);
-    batch.set(ref, { ...data, updatedAt: FieldValue.serverTimestamp() });
+  let usersUpdated = 0;
+
+  for (const [userId, preds] of userPreds) {
+    // Find the kickoff date of the user's earliest-ever prediction
+    let firstMatchDate: Date | null = null;
+    for (const matchId of preds.keys()) {
+      const d = matchDates.get(matchId);
+      if (d && (!firstMatchDate || d < firstMatchDate)) firstMatchDate = d;
+    }
+    if (!firstMatchDate) continue;
+
+    let totalPoints = 0;
+    let matchesScored = 0;
+
+    for (const matchId of finishedMatchIds) {
+      const score = scoreMap.get(matchId);
+      if (!score) continue;
+
+      const matchDate = matchDates.get(matchId);
+      if (!matchDate) continue;
+
+      // Only penalise misses on or after the user's first prediction
+      if (matchDate < firstMatchDate) continue;
+
+      const pred = preds.get(matchId);
+      if (pred) {
+        totalPoints += Math.abs(pred.score1 - score.home) + Math.abs(pred.score2 - score.away);
+      } else {
+        totalPoints += MISS_PENALTY; // missed match penalty
+      }
+      matchesScored += 1;
+    }
+
+    const info = userInfo.get(userId)!;
+    batch.set(db.collection('leaderboard').doc(userId), {
+      displayName: info.displayName,
+      photoURL: info.photoURL,
+      totalPoints,
+      matchesScored,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    usersUpdated++;
   }
+
   await batch.commit();
-  console.log(`Leaderboard updated for ${userTotals.size} users.`);
+  console.log(`Leaderboard updated for ${usersUpdated} users (miss penalty: +${MISS_PENALTY}pts).`);
 }
 
 async function syncScores() {
