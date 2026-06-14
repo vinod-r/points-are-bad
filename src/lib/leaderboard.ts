@@ -7,6 +7,14 @@ export interface LeaderboardEntry {
   photoURL: string;
   totalPoints: number;
   matchesScored: number;
+  totalPredicted: number;
+  missed: number;
+  perfect: number;
+  plusOne: number;
+  plusTwo: number;
+  plusThree: number;
+  fourPlus: number;
+  correctWinner: number;
 }
 
 export function subscribeLeaderboard(cb: (entries: LeaderboardEntry[]) => void) {
@@ -18,7 +26,7 @@ export function subscribeLeaderboard(cb: (entries: LeaderboardEntry[]) => void) 
       const aPpg = a.matchesScored > 0 ? a.totalPoints / a.matchesScored : Infinity;
       const bPpg = b.matchesScored > 0 ? b.totalPoints / b.matchesScored : Infinity;
       if (aPpg !== bPpg) return aPpg - bPpg;
-      return b.matchesScored - a.matchesScored; // more games played ranks higher
+      return b.matchesScored - a.matchesScored;
     });
     cb(entries);
   });

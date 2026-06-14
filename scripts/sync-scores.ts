@@ -113,6 +113,10 @@ async function recomputeLeaderboard(finishedMatchIds: Set<string>, scoreMap: Map
 
     let totalPoints = 0;
     let matchesScored = 0;
+    let totalPredicted = 0;
+    let missed = 0;
+    let perfect = 0, plusOne = 0, plusTwo = 0, plusThree = 0, fourPlus = 0;
+    let correctWinner = 0;
 
     for (const matchId of finishedMatchIds) {
       const score = scoreMap.get(matchId);
@@ -121,13 +125,27 @@ async function recomputeLeaderboard(finishedMatchIds: Set<string>, scoreMap: Map
       if (!matchDate) continue;
       if (matchDate < firstMatchDate) continue; // before they joined
 
+      matchesScored += 1;
       const pred = preds.get(matchId);
+
       if (pred) {
-        totalPoints += Math.abs(pred.score1 - score.home) + Math.abs(pred.score2 - score.away);
+        totalPredicted += 1;
+        const pts = Math.abs(pred.score1 - score.home) + Math.abs(pred.score2 - score.away);
+        totalPoints += pts;
+        if (pts === 0) perfect++;
+        else if (pts === 1) plusOne++;
+        else if (pts === 2) plusTwo++;
+        else if (pts === 3) plusThree++;
+        else fourPlus++;
+
+        // Correct winner/draw prediction
+        const predOutcome = pred.score1 > pred.score2 ? 'H' : pred.score1 < pred.score2 ? 'A' : 'D';
+        const actualOutcome = score.home > score.away ? 'H' : score.home < score.away ? 'A' : 'D';
+        if (predOutcome === actualOutcome) correctWinner++;
       } else {
+        missed += 1;
         totalPoints += matchPenalty.get(matchId) ?? 7; // worst score + 2
       }
-      matchesScored += 1;
     }
 
     const info = userInfo.get(userId)!;
@@ -136,6 +154,14 @@ async function recomputeLeaderboard(finishedMatchIds: Set<string>, scoreMap: Map
       photoURL: info.photoURL,
       totalPoints,
       matchesScored,
+      totalPredicted,
+      missed,
+      perfect,
+      plusOne,
+      plusTwo,
+      plusThree,
+      fourPlus,
+      correctWinner,
       updatedAt: FieldValue.serverTimestamp(),
     });
     usersUpdated++;

@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { subscribeLeaderboard } from '../lib/leaderboard';
 import type { LeaderboardEntry } from '../lib/leaderboard';
 import { useAuth } from '../lib/useAuth';
+import { PlayerProfile } from './PlayerProfile';
 
 export function Leaderboard() {
   const { user } = useAuth();
   const [rows, setRows] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<{ entry: LeaderboardEntry; rank: number } | null>(null);
 
   useEffect(() => {
     return subscribeLeaderboard((entries) => {
@@ -36,6 +38,7 @@ export function Leaderboard() {
   }
 
   return (
+    <>
     <div className="px-1 pt-4 pb-2 flex flex-col gap-0.5">
       {rows.map((row, i) => {
         const isMe = row.userId === user?.uid;
@@ -46,8 +49,9 @@ export function Leaderboard() {
         return (
           <div
             key={row.userId}
-            className={`flex items-center rounded-full px-3 ${isMe ? 'bg-yellow-300' : ''}`}
+            className={`flex items-center rounded-full px-3 cursor-pointer active:opacity-70 transition-opacity ${isMe ? 'bg-yellow-300' : 'hover:bg-gray-50'}`}
             style={{ minHeight: '44px' }}
+            onClick={() => setSelected({ entry: row, rank: i + 1 })}
           >
             {/* Rank */}
             <div className="w-8 flex-shrink-0 flex items-center justify-center">
@@ -100,5 +104,14 @@ export function Leaderboard() {
       })}
 
     </div>
+
+    {selected && (
+      <PlayerProfile
+        player={selected.entry}
+        rank={selected.rank}
+        onClose={() => setSelected(null)}
+      />
+    )}
+    </>
   );
 }
