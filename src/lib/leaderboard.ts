@@ -15,6 +15,7 @@ export interface LeaderboardEntry {
   plusThree: number;
   fourPlus: number;
   correctWinner: number;
+  matchHistory: { date: number; pts: number; miss: boolean }[];
 }
 
 export function subscribeLeaderboard(cb: (entries: LeaderboardEntry[]) => void) {

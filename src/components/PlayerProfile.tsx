@@ -1,6 +1,7 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
 } from 'recharts';
 import type { LeaderboardEntry } from '../lib/leaderboard';
 
@@ -14,6 +15,7 @@ const MEDALS = ['🥇', '🥈', '🥉'];
 
 export function PlayerProfile({ player, rank, onClose }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const [chartIndex, setChartIndex] = useState(0);
   const ppg = player.matchesScored > 0
     ? (player.totalPoints / player.matchesScored).toFixed(2)
     : '–';
@@ -71,27 +73,132 @@ export function PlayerProfile({ player, rank, onClose }: Props) {
           <StatBox label="Winner %" value={`${winnerPct}%`} />
         </div>
 
-        {/* Radar chart */}
+        {/* Chart carousel */}
         <div className="mb-4">
-          <p className="text-[11px] font-semibold tracking-widest text-gray-400 uppercase mb-2 text-center">
-            Score distribution
-          </p>
-          <ResponsiveContainer width="100%" height={220}>
-            <RadarChart data={radarData} margin={{ top: 10, right: 20, bottom: 10, left: 20 }}>
-              <PolarGrid stroke="#EEEEEE" />
-              <PolarAngleAxis
-                dataKey="label"
-                tick={{ fontFamily: 'Lexend, sans-serif', fontSize: 12, fontWeight: 600, fill: '#555' }}
-              />
-              <Radar
-                dataKey="value"
-                stroke="#F5C842"
-                fill="#F5C842"
-                fillOpacity={0.35}
-                strokeWidth={2}
-              />
-            </RadarChart>
-          </ResponsiveContainer>
+          {/* Slide titles + dots */}
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <button
+              onClick={() => setChartIndex(0)}
+              className={`text-[11px] font-semibold tracking-widest uppercase transition-colors ${chartIndex === 0 ? 'text-gray-700' : 'text-gray-300'}`}
+            >
+              Distribution
+            </button>
+            <div className="flex gap-1.5">
+              {[0, 1].map(i => (
+                <div
+                  key={i}
+                  onClick={() => setChartIndex(i)}
+                  className={`w-1.5 h-1.5 rounded-full cursor-pointer transition-colors ${chartIndex === i ? 'bg-yellow-400' : 'bg-gray-200'}`}
+                />
+              ))}
+            </div>
+            <button
+              onClick={() => setChartIndex(1)}
+              className={`text-[11px] font-semibold tracking-widest uppercase transition-colors ${chartIndex === 1 ? 'text-gray-700' : 'text-gray-300'}`}
+            >
+              Game by game
+            </button>
+          </div>
+
+          {/* Slides */}
+          <div className="overflow-hidden">
+            <div
+              className="flex transition-transform duration-300 ease-in-out"
+              style={{ transform: `translateX(-${chartIndex * 100}%)` }}
+            >
+              {/* Slide 1 — Radar */}
+              <div className="w-full flex-shrink-0">
+                <ResponsiveContainer width="100%" height={220}>
+                  <RadarChart data={radarData} margin={{ top: 10, right: 20, bottom: 10, left: 20 }}>
+                    <PolarGrid stroke="#EEEEEE" />
+                    <PolarAngleAxis
+                      dataKey="label"
+                      tick={{ fontFamily: 'Lexend, sans-serif', fontSize: 12, fontWeight: 600, fill: '#555' }}
+                    />
+                    <Radar
+                      dataKey="value"
+                      stroke="#F5C842"
+                      fill="#F5C842"
+                      fillOpacity={0.35}
+                      strokeWidth={2}
+                    />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Slide 2 — Pts per game area chart */}
+              <div className="w-full flex-shrink-0">
+                {(player.matchHistory ?? []).length < 2 ? (
+                  <div className="h-[220px] flex items-center justify-center text-sm text-gray-400">
+                    Not enough games yet
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={220}>
+                    <AreaChart
+                      data={(player.matchHistory ?? []).map((m, i) => ({ game: i + 1, pts: m.pts, miss: m.miss }))}
+                      margin={{ top: 10, right: 16, bottom: 0, left: -20 }}
+                    >
+                      <defs>
+                        <linearGradient id="ptsFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#F5C842" stopOpacity={0.4} />
+                          <stop offset="95%" stopColor="#F5C842" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" vertical={false} />
+                      <XAxis
+                        dataKey="game"
+                        tick={{ fontFamily: 'Lexend, sans-serif', fontSize: 11, fill: '#AAAAAA' }}
+                        axisLine={false}
+                        tickLine={false}
+                        label={{ value: 'Game', position: 'insideBottom', offset: -2, fontSize: 10, fill: '#CCCCCC', fontFamily: 'Lexend, sans-serif' }}
+                      />
+                      <YAxis
+                        tick={{ fontFamily: 'Lexend, sans-serif', fontSize: 11, fill: '#AAAAAA' }}
+                        axisLine={false}
+                        tickLine={false}
+                        allowDecimals={false}
+                      />
+                      <Tooltip
+                        contentStyle={{ fontFamily: 'Lexend, sans-serif', fontSize: 12, borderRadius: 8, border: '1px solid #EEE' }}
+                        formatter={(val, _name, entry) => [
+                          (entry.payload as { miss: boolean }).miss ? `${val} pts (missed)` : `${val} pts`,
+                          '',
+                        ]}
+                        labelFormatter={(label) => `Game ${label}`}
+                      />
+                      <ReferenceLine
+                        y={player.matchesScored > 0 ? player.totalPoints / player.matchesScored : 0}
+                        stroke="#F5C842"
+                        strokeDasharray="4 3"
+                        strokeWidth={1.5}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="pts"
+                        stroke="#F5C842"
+                        strokeWidth={2}
+                        fill="url(#ptsFill)"
+                        dot={(props) => {
+                          const { cx, cy, payload } = props;
+                          return (
+                            <circle
+                              key={`dot-${payload.game}`}
+                              cx={cx}
+                              cy={cy}
+                              r={3}
+                              fill={payload.miss ? '#EE4444' : '#F5C842'}
+                              stroke="white"
+                              strokeWidth={1.5}
+                            />
+                          );
+                        }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Secondary stats */}

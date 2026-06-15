@@ -117,8 +117,16 @@ async function recomputeLeaderboard(finishedMatchIds: Set<string>, scoreMap: Map
     let missed = 0;
     let perfect = 0, plusOne = 0, plusTwo = 0, plusThree = 0, fourPlus = 0;
     let correctWinner = 0;
+    const matchHistory: { date: number; pts: number; miss: boolean }[] = [];
 
-    for (const matchId of finishedMatchIds) {
+    // Sort finished matches by date for the history chart
+    const sortedMatchIds = Array.from(finishedMatchIds).sort((a, b) => {
+      const da = matchDates.get(a)?.getTime() ?? 0;
+      const db_ = matchDates.get(b)?.getTime() ?? 0;
+      return da - db_;
+    });
+
+    for (const matchId of sortedMatchIds) {
       const score = scoreMap.get(matchId);
       if (!score) continue;
       const matchDate = matchDates.get(matchId);
@@ -138,13 +146,15 @@ async function recomputeLeaderboard(finishedMatchIds: Set<string>, scoreMap: Map
         else if (pts === 3) plusThree++;
         else fourPlus++;
 
-        // Correct winner/draw prediction
         const predOutcome = pred.score1 > pred.score2 ? 'H' : pred.score1 < pred.score2 ? 'A' : 'D';
         const actualOutcome = score.home > score.away ? 'H' : score.home < score.away ? 'A' : 'D';
         if (predOutcome === actualOutcome) correctWinner++;
+        matchHistory.push({ date: matchDate.getTime(), pts, miss: false });
       } else {
         missed += 1;
-        totalPoints += matchPenalty.get(matchId) ?? 7; // worst score + 2
+        const penalty = matchPenalty.get(matchId) ?? 7;
+        totalPoints += penalty;
+        matchHistory.push({ date: matchDate.getTime(), pts: penalty, miss: true });
       }
     }
 
@@ -162,6 +172,7 @@ async function recomputeLeaderboard(finishedMatchIds: Set<string>, scoreMap: Map
       plusThree,
       fourPlus,
       correctWinner,
+      matchHistory,
       updatedAt: FieldValue.serverTimestamp(),
     });
     usersUpdated++;
