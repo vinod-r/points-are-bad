@@ -41,7 +41,6 @@ function abbr(name: string) {
 const FLAG_W = 'min(80px, 17vw)';
 const FLAG_H = 'min(58px, 12.3vw)';
 const SCORE_FONT = 'min(52px, 11.5vw)';
-const SCORE_LINE = 'min(64px, 14.2vw)';
 const SCORE_W = 'min(60px, 13vw)';
 const OUTER_GAP = 'min(8px, 2vw)';
 const INNER_GAP = 'min(8px, 2vw)';
