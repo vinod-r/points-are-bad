@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import type { Match } from '../lib/matches';
 import type { Prediction } from '../lib/predictions';
 import { calcPoints } from '../lib/scoring';
@@ -86,8 +87,23 @@ export function MatchCard({ match, myPrediction, onClick }: Props) {
   const clickable = state === 'open' || state === 'submitted' || state === 'finished';
   const pts = myPrediction ? calcPoints(myPrediction, match) : null;
 
+  const cardRef = useRef<HTMLButtonElement>(null);
+  const [dartActive, setDartActive] = useState(false);
+
+  useEffect(() => {
+    if (pts !== 0 || !cardRef.current) return;
+    const el = cardRef.current;
+    const io = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setDartActive(true); io.disconnect(); } },
+      { threshold: 0.5 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [pts]);
+
   return (
     <button
+      ref={cardRef}
       onClick={clickable ? onClick : undefined}
       className={`w-full text-left rounded-2xl border-2 bg-white p-4 transition-all
         ${clickable ? 'border-yellow-300 hover:border-yellow-400 cursor-pointer hover:shadow-md' : 'border-gray-100 cursor-default opacity-60'}
@@ -199,7 +215,7 @@ export function MatchCard({ match, myPrediction, onClick }: Props) {
                 <img
                   src="/dart.png"
                   aria-hidden
-                  className="dart-fly-in"
+                  className={dartActive ? 'dart-fly-in' : ''}
                   style={{
                     position: 'absolute',
                     right: 2,
