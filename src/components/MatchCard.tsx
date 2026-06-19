@@ -112,30 +112,26 @@ export function MatchCard({ match, myPrediction, onClick }: Props) {
 
       {/* My prediction (shown below scores for submitted + finished) */}
       {myPrediction && (
-        <div className="mt-3 flex items-center justify-center gap-4">
-          <div className="flex flex-col items-start">
-            <span
-              className="uppercase text-[10px] leading-3 mb-0.5"
-              style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 400, color: '#C0C0C0' }}
-            >
+        <div className="mt-3 flex items-center justify-center" style={{ gap: '4px' }}>
+          {/* Pill: label + score inline */}
+          <div
+            className="flex items-center"
+            style={{ backgroundColor: '#F6F6F6', borderRadius: '999px', paddingInline: '16px', paddingBlock: '4px', gap: '8px' }}
+          >
+            <span style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 400, fontSize: '10px', color: '#C0C0C0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               My Prediction
             </span>
-            <span
-              className="text-xs leading-4"
-              style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 700, color: '#BE9F32' }}
-            >
+            <span style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 700, fontSize: '12px', color: '#BE9F32' }}>
               {abbr(match.team1)} {myPrediction.score1} - {myPrediction.score2} {abbr(match.team2)}
             </span>
           </div>
+          {/* Points badge pill */}
           {pts !== null && (
             <div
-              className="flex items-center px-1 py-0.5 rounded"
-              style={{ backgroundColor: '#F6F6F6' }}
+              className="flex items-center justify-center"
+              style={{ backgroundColor: '#F6F6F6', borderRadius: '999px', padding: '4px 8px' }}
             >
-              <span
-                className="text-xs leading-4"
-                style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 700, color: '#999999' }}
-              >
+              <span style={{ fontFamily: 'Manrope, sans-serif', fontWeight: 700, fontSize: '12px', color: '#999999' }}>
                 {pts === 0 ? '🎯' : `+${pts}`}
               </span>
             </div>
