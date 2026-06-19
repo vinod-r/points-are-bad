@@ -152,8 +152,17 @@ export function MatchCard({ match, myPrediction, onClick }: Props) {
           alignItems: 'center',
           color: '#F6F6F6',
           flexShrink: 0,
+          position: 'relative',
         }}>
           -
+          {pts === 0 && dartActive && (
+            <img
+              src="/dart.png"
+              aria-hidden
+              className="dart-fly-in"
+              style={{ position: 'absolute', right: 4, top: -8, width: 48, height: 37, pointerEvents: 'none' }}
+            />
+          )}
         </span>
 
         {/* Right group: score then flag+name column */}
