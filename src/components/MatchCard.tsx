@@ -36,20 +36,30 @@ function abbr(name: string) {
   return name.slice(0, 3).toUpperCase();
 }
 
+// Flag width and score size scale with viewport so the card fits at 340 px.
+// At ≥470 px they hit their maxima (80 px / 52 px) and stop growing.
+const FLAG_W = 'min(80px, 17vw)';
+const FLAG_H = 'min(58px, 12.3vw)';
+const SCORE_FONT = 'min(52px, 11.5vw)';
+const SCORE_LINE = 'min(64px, 14.2vw)';
+const SCORE_W = 'min(60px, 13vw)';
+const OUTER_GAP = 'min(16px, 3.5vw)';
+const INNER_GAP = 'min(8px, 2vw)';
+
 function TeamFlag({ name, align = 'left' }: { name: string; align?: 'left' | 'right' }) {
   const url = flagUrl(name);
   return (
     <div className="flex flex-col" style={{ gap: 6, alignItems: align === 'right' ? 'flex-end' : 'flex-start', flexShrink: 0 }}>
-      <div style={{ width: 80, height: 58, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ width: FLAG_W, height: FLAG_H, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {url ? (
           <img
             src={url}
             alt={name}
-            style={{ width: 80, height: 58, objectFit: 'cover', borderRadius: 4 }}
+            style={{ width: FLAG_W, height: FLAG_H, objectFit: 'cover', borderRadius: 4 }}
             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
         ) : (
-          <div style={{ width: 80, height: 58, background: '#F5F5F5', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
+          <div style={{ width: FLAG_W, height: FLAG_H, background: '#F5F5F5', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
             🏳️
           </div>
         )}
@@ -59,7 +69,7 @@ function TeamFlag({ name, align = 'left' }: { name: string; align?: 'left' | 'ri
         fontWeight: 700,
         fontSize: 11,
         color: '#000000',
-        width: 80,
+        width: FLAG_W,
         lineHeight: '15px',
         textAlign: align === 'right' ? 'right' : 'left',
         display: 'block',
@@ -94,16 +104,16 @@ export function MatchCard({ match, myPrediction, onClick }: Props) {
       </div>
 
       {/* Teams + scores — layout: [flag+name | score] [–] [score | flag+name] */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, justifyContent: 'center', alignSelf: 'stretch' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: OUTER_GAP, justifyContent: 'center', alignSelf: 'stretch' }}>
         {/* Left group: flag+name column then score */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: INNER_GAP, flex: 1 }}>
           <TeamFlag name={match.team1} align="left" />
           <span style={{
             fontFamily: 'Lexend, sans-serif',
             fontWeight: 700,
-            fontSize: 52,
-            lineHeight: '64px',
-            width: 60,
+            fontSize: SCORE_FONT,
+            lineHeight: SCORE_LINE,
+            width: SCORE_W,
             textAlign: 'center',
             color: state === 'finished' ? '#000000' : '#E5E7EB',
             flexShrink: 0,
@@ -116,8 +126,8 @@ export function MatchCard({ match, myPrediction, onClick }: Props) {
         <span style={{
           fontFamily: 'Lexend, sans-serif',
           fontWeight: 700,
-          fontSize: 52,
-          lineHeight: '64px',
+          fontSize: SCORE_FONT,
+          lineHeight: SCORE_LINE,
           color: state === 'finished' ? '#000000' : '#E5E7EB',
           flexShrink: 0,
         }}>
@@ -125,13 +135,13 @@ export function MatchCard({ match, myPrediction, onClick }: Props) {
         </span>
 
         {/* Right group: score then flag+name column */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: INNER_GAP, flex: 1, justifyContent: 'flex-end' }}>
           <span style={{
             fontFamily: 'Lexend, sans-serif',
             fontWeight: 700,
-            fontSize: 52,
-            lineHeight: '64px',
-            width: 60,
+            fontSize: SCORE_FONT,
+            lineHeight: SCORE_LINE,
+            width: SCORE_W,
             textAlign: 'center',
             color: state === 'finished' ? '#000000' : '#E5E7EB',
             flexShrink: 0,
