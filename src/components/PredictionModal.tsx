@@ -5,6 +5,8 @@ import { submitPrediction, subscribeMatchPredictions } from '../lib/predictions'
 import { calcPoints, pointsLabel } from '../lib/scoring';
 import { useAuth } from '../lib/useAuth';
 import { flagUrl } from '../lib/flags';
+import { useSwipeToDismiss } from '../lib/useSwipeToDismiss';
+import { BottomSheetHandle } from './BottomSheetHandle';
 
 interface Props {
   match: Match;
@@ -43,6 +45,8 @@ export function PredictionModal({ match, myPrediction, onClose }: Props) {
   const [error, setError] = useState('');
   const [allPredictions, setAllPredictions] = useState<Prediction[]>([]);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const swipeHandlers = useSwipeToDismiss(sheetRef, onClose);
 
   // Once user has submitted, subscribe to all predictions for this match
   useEffect(() => {
@@ -79,10 +83,11 @@ export function PredictionModal({ match, myPrediction, onClose }: Props) {
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm"
       onClick={(e) => e.target === overlayRef.current && onClose()}
     >
-      <div className="w-full max-w-sm bg-white border-2 border-yellow-300 rounded-3xl p-6 shadow-2xl">
+      <div ref={sheetRef} className="bottom-sheet-enter w-full max-w-lg bg-white rounded-t-3xl px-6 pt-5 pb-10 shadow-2xl">
+        <BottomSheetHandle {...swipeHandlers} />
         {/* Header */}
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs font-semibold tracking-widest text-gray-400 uppercase">

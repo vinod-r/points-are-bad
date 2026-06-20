@@ -7,7 +7,8 @@ import type { Prediction } from './lib/predictions';
 import { MatchCard } from './components/MatchCard';
 import { PredictionModal } from './components/PredictionModal';
 import { Leaderboard } from './components/Leaderboard';
-import { CalendarBar, buildDayGroups } from './components/CalendarBar';
+import { CalendarBar } from './components/CalendarBar';
+import { buildDayGroups, shouldCollapseDay } from './lib/calendar';
 
 
 type View = 'matches' | 'leaderboard';
@@ -15,10 +16,14 @@ type View = 'matches' | 'leaderboard';
 function App() {
   const auth = useAuthProvider();
   const [matches, setMatches] = useState<Match[]>([]);
-  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [predictionState, setPredictionState] = useState<{
+    userId: string;
+    predictions: Prediction[];
+  } | null>(null);
   const [selected, setSelected] = useState<Match | null>(null);
   const [loadingMatches, setLoadingMatches] = useState(true);
   const [view, setView] = useState<View>('matches');
+  const [expandedDayKeys, setExpandedDayKeys] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     return subscribeMatches((m) => {
@@ -28,19 +33,46 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!auth.user) { setPredictions([]); return; }
-    return subscribeUserPredictions(auth.user.uid, setPredictions);
+    if (!auth.user) return;
+    const userId = auth.user.uid;
+    return subscribeUserPredictions(userId, (predictions) => {
+      setPredictionState({ userId, predictions });
+    });
   }, [auth.user]);
 
+  const predictions = predictionState && predictionState.userId === auth.user?.uid
+    ? predictionState.predictions
+    : [];
   const predMap = new Map(predictions.map((p) => [p.matchId, p]));
   const dayGroups = buildDayGroups(matches);
 
-  function scrollToDay(dateKey: string) {
+  function scrollToDay(dateKey: string, behavior: ScrollBehavior = 'smooth') {
     const el = document.getElementById(`day-${dateKey}`);
     if (!el) return;
     const headerHeight = 80;
     const top = el.getBoundingClientRect().top + window.scrollY - headerHeight - 8;
-    window.scrollTo({ top, behavior: 'smooth' });
+    window.scrollTo({ top, behavior });
+  }
+
+  function expandAndScrollToDay(dateKey: string) {
+    setExpandedDayKeys((current) => {
+      if (current.has(dateKey)) return current;
+      const next = new Set(current);
+      next.add(dateKey);
+      return next;
+    });
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => scrollToDay(dateKey));
+    });
+  }
+
+  function toggleDay(dateKey: string) {
+    setExpandedDayKeys((current) => {
+      const next = new Set(current);
+      if (next.has(dateKey)) next.delete(dateKey);
+      else next.add(dateKey);
+      return next;
+    });
   }
 
   // Scroll to today whenever the matches tab becomes active
@@ -51,7 +83,7 @@ function App() {
     const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const target = dayGroups.find((g) => g.dateKey >= todayKey);
     if (!target) return;
-    requestAnimationFrame(() => scrollToDay(target.dateKey));
+    requestAnimationFrame(() => scrollToDay(target.dateKey, 'auto'));
   }, [view, dayGroups.length > 0]); // eslint-disable-line react-hooks/exhaustive-deps
 
 if (auth.loading) {
@@ -135,26 +167,61 @@ if (auth.loading) {
           <Leaderboard />
         ) : (
           <div className="space-y-8">
-            {dayGroups.map((g) => (
-              <section key={g.dateKey} id={`day-${g.dateKey}`}>
-                <h2 className="text-xs font-semibold tracking-widest text-gray-400 uppercase mb-3 px-1">
-                  {g.matches[0].date.toLocaleDateString(undefined, {
-                    weekday: 'long', month: 'long', day: 'numeric',
-                  })}
-                </h2>
-                <div className="space-y-3">
-                  {g.matches.map((m) => (
-                    <div key={m.id} id={`match-${m.id}`}>
-                      <MatchCard
-                        match={m}
-                        myPrediction={predMap.get(m.id)}
-                        onClick={() => setSelected(m)}
-                      />
+            {dayGroups.map((g) => {
+              const collapsible = shouldCollapseDay(g);
+              const collapsed = collapsible && !expandedDayKeys.has(g.dateKey);
+              const dateLabel = g.matches[0].date.toLocaleDateString(undefined, {
+                weekday: 'long', month: 'long', day: 'numeric',
+              });
+
+              return (
+                <section key={g.dateKey} id={`day-${g.dateKey}`}>
+                  {collapsible ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleDay(g.dateKey)}
+                      aria-expanded={!collapsed}
+                      className={`w-full flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-left transition-colors hover:bg-gray-50 ${collapsed ? 'bg-gray-50' : 'mb-3'}`}
+                    >
+                      <span className="text-xs font-semibold tracking-widest text-gray-400 uppercase">
+                        {dateLabel}
+                      </span>
+                      <span className="flex items-center gap-2 text-xs font-semibold text-gray-400">
+                        {collapsed && `${g.matches.length} matches`}
+                        <svg
+                          aria-hidden="true"
+                          className={`w-4 h-4 transition-transform ${collapsed ? '' : 'rotate-180'}`}
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                    </button>
+                  ) : (
+                    <h2 className="text-xs font-semibold tracking-widest text-gray-400 uppercase mb-3 px-1">
+                      {dateLabel}
+                    </h2>
+                  )}
+
+                  {!collapsed && (
+                    <div className="space-y-3">
+                      {g.matches.map((m) => (
+                        <div key={m.id} id={`match-${m.id}`}>
+                          <MatchCard
+                            match={m}
+                            myPrediction={predMap.get(m.id)}
+                            onClick={() => setSelected(m)}
+                          />
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </section>
-            ))}
+                  )}
+                </section>
+              );
+            })}
           </div>
         )}
       </div>
@@ -164,7 +231,7 @@ if (auth.loading) {
         <CalendarBar
           groups={dayGroups}
           predMap={predMap}
-          onSelectDay={scrollToDay}
+          onSelectDay={expandAndScrollToDay}
         />
       )}
 
