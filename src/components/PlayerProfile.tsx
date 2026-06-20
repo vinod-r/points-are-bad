@@ -4,6 +4,8 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
 import type { LeaderboardEntry } from '../lib/leaderboard';
+import { useSwipeToDismiss } from '../lib/useSwipeToDismiss';
+import { BottomSheetHandle } from './BottomSheetHandle';
 
 interface Props {
   player: LeaderboardEntry;
@@ -15,6 +17,8 @@ const MEDALS = ['🥇', '🥈', '🥉'];
 
 export function PlayerProfile({ player, rank, onClose }: Props) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const swipeHandlers = useSwipeToDismiss(sheetRef, onClose);
   const [chartIndex, setChartIndex] = useState(0);
   const ppg = player.matchesScored > 0
     ? (player.totalPoints / player.matchesScored).toFixed(2)
@@ -39,9 +43,8 @@ export function PlayerProfile({ player, rank, onClose }: Props) {
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm"
       onClick={(e) => e.target === overlayRef.current && onClose()}
     >
-      <div className="w-full max-w-lg bg-white rounded-t-3xl px-6 pt-5 pb-10 shadow-2xl">
-        {/* Drag handle */}
-        <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
+      <div ref={sheetRef} className="bottom-sheet-enter w-full max-w-lg bg-white rounded-t-3xl px-6 pt-5 pb-10 shadow-2xl">
+        <BottomSheetHandle {...swipeHandlers} />
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

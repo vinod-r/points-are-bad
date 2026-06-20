@@ -3,6 +3,7 @@ import type { Match } from '../lib/matches';
 import type { Prediction } from '../lib/predictions';
 import { calcPoints } from '../lib/scoring';
 import { flagUrl } from '../lib/flags';
+import { getMatchState } from '../lib/match-state';
 
 interface Props {
   match: Match;
@@ -10,22 +11,7 @@ interface Props {
   onClick: () => void;
 }
 
-type CardState = 'open' | 'submitted' | 'closed' | 'soon' | 'finished';
-
-function getState(match: Match, pred: Prediction | undefined): CardState {
-  const now = new Date();
-  const kickoff = match.date;
-  const msUntil = kickoff.getTime() - now.getTime();
-  const threeDays = 3 * 24 * 60 * 60 * 1000;
-
-  if (match.actualScore1 != null) return 'finished';
-  if (pred) return 'submitted';
-  if (now >= kickoff) return 'closed';
-  if (msUntil <= threeDays) return 'open';
-  return 'soon';
-}
-
-const statusConfig: Record<CardState, { dot: string; label: string; textColor: string }> = {
+const statusConfig: Record<ReturnType<typeof getMatchState>, { dot: string; label: string; textColor: string }> = {
   open:      { dot: 'bg-emerald-500', label: 'Predict',     textColor: 'text-emerald-600' },
   submitted: { dot: 'bg-emerald-500', label: 'Submitted',   textColor: 'text-gray-500' },
   closed:    { dot: 'bg-red-400',     label: 'Missed',      textColor: 'text-red-500' },
@@ -78,7 +64,7 @@ function TeamFlag({ name, align = 'left' }: { name: string; align?: 'left' | 'ri
 }
 
 export function MatchCard({ match, myPrediction, onClick }: Props) {
-  const state = getState(match, myPrediction);
+  const state = getMatchState(match, myPrediction);
   const { dot, label, textColor } = statusConfig[state];
   const clickable = state === 'open' || state === 'submitted' || state === 'finished';
   const pts = myPrediction ? calcPoints(myPrediction, match) : null;

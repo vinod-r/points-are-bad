@@ -1,73 +1,45 @@
-# React + TypeScript + Vite
+# Points 'R' Bad
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A mobile-first World Cup score-prediction app. Lower scores are better: each prediction earns one point for every goal it differs from the final score.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React 19, TypeScript, Vite, and Tailwind CSS
+- Firebase Authentication and Cloud Firestore
+- Firebase Admin scripts for fixtures, results, and leaderboard aggregation
 
-## React Compiler
+## Local development
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Copy the environment template and add the Firebase web-app configuration:
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cp .env.example .env
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Enable Google authentication and add `localhost` as an authorized domain in the Firebase console. Deploy `firestore.rules` before using predictions. Never put a Firebase Admin service account in `.env` or commit it.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+To seed live fixtures, add `FOOTBALL_DATA_API_KEY` to `.env`, place a downloaded Admin SDK key at `service-account.json`, then run:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npx tsx --env-file=.env scripts/seed.ts
 ```
+
+## Quality checks
+
+```bash
+npm run check       # lint, unit tests, and production build
+npm run test:watch  # tests while developing
+```
+
+## Project layout
+
+```text
+src/components/   UI components and interaction flows
+src/lib/          Firebase data access and domain logic
+src/data/         Local fixture data
+scripts/          Firebase Admin data jobs
+firestore.rules   Firestore authorization rules
+```
+
+Scoring and UI state logic should stay in `src/lib` so it can be unit tested. Components should handle rendering and interaction; Firestore reads and writes belong in the existing data-access modules.

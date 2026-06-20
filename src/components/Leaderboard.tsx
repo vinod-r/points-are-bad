@@ -1,14 +1,29 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { subscribeLeaderboard } from '../lib/leaderboard';
 import type { LeaderboardEntry } from '../lib/leaderboard';
 import { useAuth } from '../lib/useAuth';
 import { PlayerProfile } from './PlayerProfile';
+import { LeaderboardFilterSheet } from './LeaderboardFilterSheet';
+import {
+  excludeAllAvailableUsers,
+  filterLeaderboardEntries,
+  includeAllAvailableUsers,
+  readExcludedUserIds,
+  toggleExcludedUser,
+  writeExcludedUserIds,
+} from '../lib/leaderboard-filter';
 
 export function Leaderboard() {
   const { user } = useAuth();
   const [rows, setRows] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<{ entry: LeaderboardEntry; rank: number } | null>(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
+  const viewerId = user?.uid ?? '';
+  const [excludedUserIds, setExcludedUserIds] = useState<Set<string>>(() =>
+    viewerId ? readExcludedUserIds(window.localStorage, viewerId) : new Set(),
+  );
 
   useEffect(() => {
     return subscribeLeaderboard((entries) => {
@@ -16,6 +31,22 @@ export function Leaderboard() {
       setLoading(false);
     });
   }, []);
+
+  const visibleRows = filterLeaderboardEntries(rows, excludedUserIds);
+  const closeFilter = useCallback(() => setFilterOpen(false), []);
+
+  function updateExcludedUserIds(next: Set<string>) {
+    setExcludedUserIds(next);
+    if (viewerId) writeExcludedUserIds(window.localStorage, viewerId, next);
+  }
+
+  function selectAll() {
+    updateExcludedUserIds(includeAllAvailableUsers(excludedUserIds, rows));
+  }
+
+  function clearAll() {
+    updateExcludedUserIds(excludeAllAvailableUsers(excludedUserIds, rows));
+  }
 
   if (loading) {
     return (
@@ -39,8 +70,40 @@ export function Leaderboard() {
 
   return (
     <>
+    <div className="px-1 pt-4 flex items-center justify-between gap-4">
+      <h2 className="font-['Lexend'] text-xl font-black text-gray-900">
+        Leaderboard
+      </h2>
+      <button
+        ref={filterButtonRef}
+        onClick={() => setFilterOpen(true)}
+        aria-label={`Filter leaderboard, ${visibleRows.length} of ${rows.length} players selected`}
+        className="flex items-center gap-2 px-3 py-2 rounded-full bg-gray-100 hover:bg-gray-200 text-sm font-bold text-gray-700"
+      >
+        <svg aria-hidden="true" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round" />
+        </svg>
+        {visibleRows.length} of {rows.length}
+      </button>
+    </div>
+
+    {visibleRows.length === 0 ? (
+      <div className="text-center py-20 px-6">
+        <p className="text-4xl mb-4">👥</p>
+        <p className="font-bold text-lg mb-1 text-gray-900">No players selected</p>
+        <p className="text-sm text-gray-500 mb-5">
+          Select players to build your custom leaderboard.
+        </p>
+        <button
+          onClick={selectAll}
+          className="px-5 py-2.5 rounded-xl bg-yellow-300 hover:bg-yellow-400 font-black text-gray-900"
+        >
+          Select all players
+        </button>
+      </div>
+    ) : (
     <div className="px-1 pt-4 pb-2 flex flex-col gap-0.5">
-      {rows.map((row, i) => {
+      {visibleRows.map((row, i) => {
         const isMe = row.userId === user?.uid;
         const ptsPerGame = row.matchesScored > 0
           ? (row.totalPoints / row.matchesScored).toFixed(1)
@@ -104,12 +167,25 @@ export function Leaderboard() {
       })}
 
     </div>
+    )}
 
     {selected && (
       <PlayerProfile
         player={selected.entry}
         rank={selected.rank}
         onClose={() => setSelected(null)}
+      />
+    )}
+
+    {filterOpen && (
+      <LeaderboardFilterSheet
+        entries={rows}
+        excludedUserIds={excludedUserIds}
+        returnFocusRef={filterButtonRef}
+        onToggle={(userId) => updateExcludedUserIds(toggleExcludedUser(excludedUserIds, userId))}
+        onSelectAll={selectAll}
+        onClearAll={clearAll}
+        onClose={closeFilter}
       />
     )}
     </>
